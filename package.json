@@ -15,11 +15,15 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "better-sqlite3": "^9.4.0",
     "commander": "^12.1.0",
     "hono": "^4.6.13",
-    "js-mdict": "^6.0.3"
+    "js-mdict": "^6.0.3",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.9",
     "@types/node": "^22.10.1",
     "tsx": "^4.19.2"
   }

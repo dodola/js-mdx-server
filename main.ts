@@ -4,12 +4,27 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { etag } from "hono/etag";
 import process from "node:process";
+import sqlite3 from "sqlite3";
+import { Database, open } from "sqlite";
 
 import { mainHandler } from "./mainHandler.ts";
 import { MdxServer } from "./mdxServer.ts";
 import { scanDir } from "./util.ts";
 
 const Hostname = "127.0.0.1";
+
+// 全局数据库连接
+let dbConnection: Database | null = null;
+
+async function initDatabase(dict: string) {
+  if (!dbConnection) {
+    dbConnection = await open({
+      filename: dict + "/ecdict_wfd.db",
+      driver: sqlite3.Database,
+    });
+  }
+  return dbConnection;
+}
 
 function main() {
   program
@@ -58,7 +73,8 @@ Options（参数说明）:
   }
 
   // dir 参数
-  if (!flags.dir) throw "--dir 参数: 表示 mdx文件 所在目录的上级目录，请指定绝对路径";
+  if (!flags.dir)
+    throw "--dir 参数: 表示 mdx文件 所在目录的上级目录，请指定绝对路径";
 
   const results = scanDir(flags.dir);
   if (!results.length) throw "没有找到mdx文件，请检查！";
@@ -70,7 +86,10 @@ Options（参数说明）:
     app.use("*", etag({ weak: true }));
     app.get("/*", (c) => mdxServer.lookup(c));
     const server = serve({ port: 0, fetch: app.fetch });
-    const mdxServer = new MdxServer(result.mdxDir, result.fileInfo, { server, app });
+    const mdxServer = new MdxServer(result.mdxDir, result.fileInfo, {
+      server,
+      app,
+    });
     return mdxServer;
   });
 
@@ -84,8 +103,31 @@ Options（参数说明）:
   mainApp.use(cors());
   // for http 304 cache
   mainApp.use("*", etag({ weak: true }));
+  mainApp.post("/api/info", (c) =>
+    c.json({ data: mdxServers.map((it) => it.info()) })
+  );
+
+  // Word completion endpoint
+  mainApp.get("/api/word-complete", async (c) => {
+    const query = c.req.query("q");
+    if (!query) {
+      return c.json({ suggestions: [] });
+    }
+    console.log("Query:", query);
+
+    try {
+      const db = await initDatabase(flags.dir);
+      const rows = await db.all(
+        `SELECT word FROM ecdict WHERE word LIKE ? || '%' OR word LIKE '%' || ? || '%' LIMIT 50`,
+        [query.toLowerCase(), query.toLowerCase()]
+      );
+      return c.json({ suggestions: rows.map((row) => row.word) });
+    } catch (error) {
+      console.error("Database error:", error);
+      return c.json({ error: "Database error" }, 500);
+    }
+  });
   mainApp.get("/*", mainHandler);
-  mainApp.post("/api/info", (c) => c.json({ data: mdxServers.map((it) => it.info()) }));
 
   const mainServer = serve({ port, fetch: mainApp.fetch });
 
@@ -99,8 +141,12 @@ Options（参数说明）:
   function shutdownServers() {
     console.log("\nShutting down all servers...");
     mdxServers.forEach(({ serverInfo: { server } }) => server.close());
-    mdxServers.splice(0, mdxServers.length - 1);
+    // 关闭数据库连接
+    if (dbConnection) {
+      dbConnection.close();
+    }
     mainServer.close();
+    process.exit(0);
   }
 
   // 监听退出信号，确保所有服务关闭
