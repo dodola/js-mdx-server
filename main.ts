@@ -126,6 +126,25 @@ Options（参数说明）:
       return c.json({ error: "Database error" }, 500);
     }
   });
+
+mainApp.get("/api/yd-suggest", async (c) => {
+  const query = c.req.query("q");
+  if (!query) {
+    return c.json({ suggestions: [] });
+  }
+
+  try {
+    const response = await fetch(`https://dict.youdao.com/suggest?num=5&ver=3.0&doctype=json&cache=false&le=en&q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    return c.json(data);
+  } catch (error) {
+    console.error("Youdao API error:", error);
+    return c.json({ error: "Youdao API error" }, 500);
+  }
+});
+
+
+
   mainApp.get("/*", mainHandler);
 
   const mainServer = serve({ port, fetch: mainApp.fetch });
