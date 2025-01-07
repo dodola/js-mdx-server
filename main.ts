@@ -80,12 +80,14 @@ Options（参数说明）:
   if (!results.length) throw "没有找到mdx文件，请检查！";
 
   // mdx server
+
+  let port = 44000;
   const mdxServers = results.map((result) => {
     const app = new Hono();
     // for http 304 cache
     app.use("*", etag({ weak: true }));
     app.get("/*", (c) => mdxServer.lookup(c));
-    const server = serve({ port: 0, fetch: app.fetch });
+    const server = serve({ port: port++, fetch: app.fetch });
     const mdxServer = new MdxServer(result.mdxDir, result.fileInfo, {
       server,
       app,
