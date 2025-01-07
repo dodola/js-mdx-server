@@ -108,7 +108,7 @@ Options（参数说明）:
   );
 
   // Word completion endpoint
-  mainApp.get("/api/word-complete", async (c) => {
+  mainApp.get("/api/wq", async (c) => {
     const query = c.req.query("q");
     if (!query) {
       return c.json({ suggestions: [] });
@@ -117,10 +117,7 @@ Options（参数说明）:
 
     try {
       const db = await initDatabase(flags.dir);
-      const rows = await db.all(
-        `SELECT word FROM ecdict WHERE word LIKE ? || '%' OR word LIKE '%' || ? || '%' LIMIT 50`,
-        [query.toLowerCase(), query.toLowerCase()]
-      );
+      const rows = await db.all(`SELECT word FROM ecdict_wfd WHERE word LIKE '%${query.toLowerCase()}%' LIMIT 50`);      
       return c.json({ suggestions: rows.map((row) => row.word) });
     } catch (error) {
       console.error("Database error:", error);
