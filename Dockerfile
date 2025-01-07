@@ -1,7 +1,7 @@
 # Use an official Node.js runtime as the base image
 FROM node:18-alpine AS base
 # 切换npm 镜像
-RUN npm config set registry https://registry.npm.taobao.org
+RUN npm config set registry https://registry.npmmirror.com
 
 # Set the working directory in the container
 WORKDIR /app
