@@ -119,7 +119,7 @@ Options（参数说明）:
 
     try {
       const db = await initDatabase(flags.dir);
-      const rows = await db.all(`SELECT word FROM ecdict_wfd WHERE word LIKE '%${query.toLowerCase()}%' LIMIT 50`);      
+      const rows = await db.all(`SELECT word FROM ecdict_wfd WHERE word LIKE '${query.toLowerCase()}%' LIMIT 50`);      
       return c.json({ suggestions: rows.map((row) => row.word) });
     } catch (error) {
       console.error("Database error:", error);
